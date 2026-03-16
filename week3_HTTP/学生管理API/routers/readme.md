@@ -1,0 +1,2 @@
+这是学生管理API的最初始版本，这个版本里边学习了简单的FastAPI调用，以及里边的Query，Path，Body以及Pydantic。
+顺便还学习了开发测试工具Apifox这个工具的使用。

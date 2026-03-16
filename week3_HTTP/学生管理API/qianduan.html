@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>学生管理系统</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 24px;
+      background: #f5f7fb;
+      color: #222;
+    }
+    h1, h2 { margin-top: 0; }
+    .container {
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    input, button {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #d0d7e2;
+      font-size: 14px;
+    }
+    button {
+      cursor: pointer;
+      border: none;
+      background: #2563eb;
+      color: white;
+      font-weight: 600;
+    }
+    button.secondary {
+      background: #64748b;
+    }
+    button.danger {
+      background: #dc2626;
+    }
+    button.warning {
+      background: #f59e0b;
+      color: #111;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .actions button {
+      width: auto;
+      min-width: 80px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 12px;
+      background: #fff;
+      overflow: hidden;
+    }
+    th, td {
+      padding: 12px;
+      border-bottom: 1px solid #e5e7eb;
+      text-align: left;
+      font-size: 14px;
+    }
+    th {
+      background: #f8fafc;
+    }
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .muted {
+      color: #64748b;
+      font-size: 14px;
+    }
+    .message {
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+      display: none;
+    }
+    .message.success {
+      background: #dcfce7;
+      color: #166534;
+      display: block;
+    }
+    .message.error {
+      background: #fee2e2;
+      color: #991b1b;
+      display: block;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="topbar">
+      <div>
+        <h1>学生管理系统</h1>
+        <div class="muted">前端默认请求 http://127.0.0.1:8000</div>
+      </div>
+    </div>
+
+    <div id="message" class="message"></div>
+
+    <div class="card">
+      <h2>筛选与分页</h2>
+      <div class="grid">
+        <input id="filter-name" type="text" placeholder="按姓名筛选，例如 Tom" />
+        <input id="filter-min-score" type="number" placeholder="最低分" />
+        <input id="filter-max-score" type="number" placeholder="最高分" />
+        <input id="filter-page" type="number" value="1" min="1" placeholder="页码" />
+        <input id="filter-size" type="number" value="10" min="1" placeholder="每页数量" />
+      </div>
+      <div class="actions" style="margin-top: 12px;">
+        <button onclick="loadStudents()">查询学生</button>
+        <button class="secondary" onclick="resetFilters()">重置筛选</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>新增学生</h2>
+      <div class="grid">
+        <input id="create-name" type="text" placeholder="姓名" />
+        <input id="create-age" type="number" placeholder="年龄" />
+        <input id="create-score" type="number" step="0.1" placeholder="分数" />
+      </div>
+      <div class="actions" style="margin-top: 12px;">
+        <button onclick="createStudent()">新增学生</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>学生列表</h2>
+      <div class="muted" id="list-summary">还没有加载数据</div>
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>姓名</th>
+            <th>年龄</th>
+            <th>分数</th>
+            <th>操作</th>
+          </tr>
+        </thead>
+        <tbody id="student-table-body">
+          <tr>
+            <td colspan="5">暂无数据</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const BASE_URL = 'http://127.0.0.1:8000';
+
+    function showMessage(text, type = 'success') {
+      const box = document.getElementById('message');
+      box.className = `message ${type}`;
+      box.textContent = text;
+    }
+
+    function clearMessage() {
+      const box = document.getElementById('message');
+      box.className = 'message';
+      box.textContent = '';
+    }
+
+    function buildQuery() {
+      const params = new URLSearchParams();
+      const name = document.getElementById('filter-name').value.trim();
+      const minScore = document.getElementById('filter-min-score').value.trim();
+      const maxScore = document.getElementById('filter-max-score').value.trim();
+      const page = document.getElementById('filter-page').value.trim() || '1';
+      const size = document.getElementById('filter-size').value.trim() || '10';
+
+      if (name) params.append('name', name);
+      if (minScore) params.append('min_score', minScore);
+      if (maxScore) params.append('max_score', maxScore);
+      params.append('page', page);
+      params.append('size', size);
+
+      return params.toString();
+    }
+
+    async function loadStudents() {
+      clearMessage();
+      try {
+        const query = buildQuery();
+        const response = await fetch(`${BASE_URL}/students?${query}`);
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.detail || '查询失败');
+        }
+
+        const tbody = document.getElementById('student-table-body');
+        const summary = document.getElementById('list-summary');
+        const students = result.data.students;
+
+        summary.textContent = `共 ${result.data.total} 条，当前第 ${result.data.page} 页，每页 ${result.data.size} 条`;
+
+        if (!students.length) {
+          tbody.innerHTML = '<tr><td colspan="5">没有符合条件的学生</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = students.map(student => `
+          <tr>
+            <td>${student.id}</td>
+            <td>${student.name}</td>
+            <td>${student.age}</td>
+            <td>${student.score}</td>
+            <td>
+              <div class="actions">
+                <button class="warning" onclick="editStudent(${student.id}, '${student.name}', ${student.age}, ${student.score})">修改</button>
+                <button class="danger" onclick="deleteStudent(${student.id})">删除</button>
+              </div>
+            </td>
+          </tr>
+        `).join('');
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    }
+
+    async function createStudent() {
+      clearMessage();
+      const name = document.getElementById('create-name').value.trim();
+      const age = Number(document.getElementById('create-age').value);
+      const score = Number(document.getElementById('create-score').value);
+
+      try {
+        const response = await fetch(`${BASE_URL}/students`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, age, score })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          const detail = result.detail || '新增失败';
+          throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        }
+
+        showMessage('新增成功');
+        document.getElementById('create-name').value = '';
+        document.getElementById('create-age').value = '';
+        document.getElementById('create-score').value = '';
+        loadStudents();
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    }
+
+    async function deleteStudent(studentId) {
+      clearMessage();
+      if (!confirm(`确定要删除 ID 为 ${studentId} 的学生吗？`)) return;
+
+      try {
+        const response = await fetch(`${BASE_URL}/students/${studentId}`, {
+          method: 'DELETE'
+        });
+        const result = await response.json();
+
+        if (!response.ok) {
+          throw new Error(result.detail || '删除失败');
+        }
+
+        showMessage('删除成功');
+        loadStudents();
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    }
+
+    async function editStudent(id, oldName, oldAge, oldScore) {
+      clearMessage();
+      const name = prompt('请输入新的姓名：', oldName);
+      if (name === null) return;
+
+      const ageText = prompt('请输入新的年龄：', oldAge);
+      if (ageText === null) return;
+
+      const scoreText = prompt('请输入新的分数：', oldScore);
+      if (scoreText === null) return;
+
+      const age = Number(ageText);
+      const score = Number(scoreText);
+
+      try {
+        const response = await fetch(`${BASE_URL}/students/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name: name.trim(), age, score })
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+          const detail = result.detail || '修改失败';
+          throw new Error(typeof detail === 'string' ? detail : JSON.stringify(detail));
+        }
+
+        showMessage('修改成功');
+        loadStudents();
+      } catch (error) {
+        showMessage(error.message, 'error');
+      }
+    }
+
+    function resetFilters() {
+      document.getElementById('filter-name').value = '';
+      document.getElementById('filter-min-score').value = '';
+      document.getElementById('filter-max-score').value = '';
+      document.getElementById('filter-page').value = 1;
+      document.getElementById('filter-size').value = 10;
+      loadStudents();
+    }
+
+    loadStudents();
+  </script>
+</body>
+</html>
