@@ -1,0 +1,1 @@
+RAG stands for Retrieval-Augmented Generation. It combines information retrieval with large language models. The retrieval module finds relevant text chunks from external documents, and the generation module uses these chunks to answer user questions.

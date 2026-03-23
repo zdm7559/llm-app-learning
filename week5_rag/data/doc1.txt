@@ -1,0 +1,1 @@
+Spatial transcriptomics is a technology used to measure gene expression while preserving spatial information in tissues. It helps researchers understand where cells are located and how gene activity varies across tissue regions.
